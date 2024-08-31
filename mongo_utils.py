@@ -76,12 +76,12 @@ def get_collection(database, collection_name: str):
 
 ### Functions to create database and collections
 
-
 def createDB_from_data(
     client: MongoClient,
     database_name: str,
     collection_name: str,
-    initial_document: Dict[str, Any]
+    initial_document: Dict[str, Any],
+    custom_id: Any = None
 ) -> MongoClient:
     """
     Create a database by inserting an initial document into a collection.
@@ -89,6 +89,7 @@ def createDB_from_data(
     :param database_name: Name of the database to create
     :param collection_name: Name of the collection to create
     :param initial_document: The first document to insert
+    :param custom_id: Optional custom ID to use for the document
     :return: The created database
     """
     # Check if the database already exists
@@ -103,6 +104,10 @@ def createDB_from_data(
     else:
         db = client[database_name]
 
+    # Prepare the document with custom ID if provided
+    if custom_id is not None:
+        initial_document['_id'] = custom_id
+
     # Insert the initial document into the specified collection. This actually creates the collection.
     result = db[collection_name].insert_one(initial_document)
 
@@ -113,4 +118,40 @@ def createDB_from_data(
         raise Exception("Failed to insert document and create database/collection.")
 
     return db
+
+
+def insert_document(
+    collection,
+    document: Dict[str, Any],
+    key: Any = None
+) -> str:
+    """
+    Insert a single document into the specified collection with a custom key.
+    :param collection: MongoDB collection object
+    :param document: Document to insert
+    :param key: Optional unique key value for the document
+    :return: Inserted document ID if successful, None otherwise
+    """
+    try:
+        if key is not None:
+            # Check if a document with the same key already exists
+            if collection.find_one({"_id": key}):
+                print(f"Document with key '{key}' already exists in the collection.")
+                return None
+            # Merge the key and document
+            document_to_insert = {"_id": key, **document}
+        else:
+            document_to_insert = document
+
+        # Insert the document
+        result = collection.insert_one(document_to_insert)
+        
+        if result.acknowledged:
+            return str(result.inserted_id)
+        else:
+            print(f"Failed to insert document with key: {key}")
+            return None
+    except Exception as e:
+        print(f"Error inserting document with key: {key}. Error: {str(e)}")
+        return None
 
