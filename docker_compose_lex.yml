@@ -1,0 +1,16 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: lexfridman_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - lex_chat_mongodb_data:/data/db
+      - lex_chat_mongodb_data:/data/configdb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+
+volumes:
+  lex_chat_mongodb_data:
+    name: lex_chat_mongodb_data
