@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List, Union
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
@@ -41,7 +41,7 @@ def connect_to_mongodb() -> MongoClient:
         return None
     
 
-def check_connection(client: MongoClient, verbose: bool = False):
+def check_connection(client: MongoClient, verbose: bool = False) -> bool:
     """
     Check if the connection is still alive
     """
@@ -72,6 +72,36 @@ def get_collection(database, collection_name: str):
     Get the collection
     """
     return database[collection_name]
+
+
+def get_documents(collection, limit: int = None, exclude_id: bool = True, output_format: str = 'dict') -> Union[Dict[str, Any], List[Dict[str, Any]]]:
+    """
+    Get all documents from a collection
+    :param collection: MongoDB collection object
+    :param limit: Optional limit on the number of documents to return
+    :param exclude_id: Optional flag to exclude the '_id' field from the documents
+    :param output_format: Optional format of the output documents. Can be 'dict' or 'list'. Default is 'dict'.
+    :return: A dictionary or list of documents from the collection
+    """
+    # Obtain the documents with or without the _id field as specified
+    if exclude_id:
+        documents = collection.find({}, {'_id': 0})
+    else:
+        documents = collection.find({})
+    # Limit the number of documents returned
+    if limit:
+        documents = documents.limit(limit)
+        
+    # Return the documents in the specified format
+    if output_format == 'dict':
+        if 'video_id' in documents[0]:
+            return {doc['video_id']: doc for doc in documents}
+        else:
+            return {doc for doc in documents}
+    elif output_format == 'list':
+        return [doc for doc in documents]
+    else:
+        raise ValueError(f"Invalid output format: {output_format}. Please specify 'dict' or 'list'.")
 
 
 ### Functions to create database and collections
