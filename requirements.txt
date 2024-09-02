@@ -3,3 +3,5 @@ numpy==1.26.4
 ipykernel==6.29.0
 pymongo==4.6.2
 python-dotenv==1.0.0
+youtube-transcript-api==0.6.2
+urllib3==1.26.19
