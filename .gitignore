@@ -2,3 +2,4 @@
 .env
 
 lex_rag/
+chroma_db/
