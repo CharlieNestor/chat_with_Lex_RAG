@@ -1,5 +1,6 @@
 import os
 import random
+import shutil
 import mongo_utils as mu
 from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -12,15 +13,13 @@ from langchain.chains import create_history_aware_retriever, create_retrieval_ch
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
-
-
 load_dotenv()
 
 
 class Connection:
     """
     A class to connect to a MongoDB database and collection. 
-    It retrieves all the video titles.
+    It also retrieves all the video titles and video ids.
     """
     def __init__(self, db_name = 'lex_podcast', collection_name = 'Podcast_transcripts'):
         self.db_name = db_name
@@ -33,6 +32,9 @@ class Connection:
         self.video_ids = self.get_video_ids()
 
     def connect(self):
+        """
+        Connect to the MongoDB database and collection.
+        """
         self.client = mu.connect_to_mongodb()
         if not self.client:
             raise ConnectionError("Error connecting to MongoDB")
@@ -45,24 +47,36 @@ class Connection:
         if self.collection is None:
             raise ValueError(f"Collection {self.collection_name} not found")
         
-    def check_connection(self):
+    def check_connection(self) -> bool:
+        """
+        Check if the connection to the MongoDB database is still active.
+        """
         return mu.check_connection(self.client)
         
-    def get_all_videos(self):
+    def get_all_videos(self) -> dict:
+        """
+        Get all the videos from the database.
+        """
         return mu.get_documents(
             collection=self.collection, 
             exclude_id=True, 
             output_format='dict'
         )
 
-    def get_video_titles(self):
+    def get_video_titles(self) -> list:
+        """
+        Get all the video titles from the database in the order of published_at date.
+        """
         all_videos = self.get_all_videos()
         # sort by published_at date
         sorted_videos = sorted(all_videos.values(), key=lambda x: x['date'])
         # return the titles in the sorted order
         return [video['title'] for video in sorted_videos]
     
-    def get_video_ids(self):
+    def get_video_ids(self) -> list:
+        """
+        Get all the video ids from the database in the order of published_at date.
+        """
         all_videos = self.get_all_videos()
         # sort by published_at date
         sorted_videos = sorted(all_videos.values(), key=lambda x: x['date'])
@@ -151,6 +165,7 @@ class RAGSystem:
                 guest_name: str = None,
                 date: str = None,
                 ):
+        self.persist_directory = f"./chroma_db/{video_id}"
         self.model = self.define_model()
         self.vector_store = self.define_vector_store(video_id, transcript, video_title, guest_name, date)
         self.retriever = self.setup_retriever()
@@ -173,25 +188,24 @@ class RAGSystem:
         return chosen_model
     
     
-    def define_vector_store(self, video_id: str, transcript: str, video_title: str, guest_name: str, date: str, verbose: bool = True) -> Chroma:
+    def define_vector_store(self, video_id: str, transcript: str, video_title: str, guest_name: str, date: str, verbose: bool = False) -> Chroma:
         """
         Define and return a vector store for a given video transcript.
         :param video_id: The ID of the video.
         :param verbose: Whether to print verbose output.
         :return: A vector store for the video transcript.
         """
-        persist_directory = f"./chroma_db/{video_id}"
         embeddings = OllamaEmbeddings(model=self.model)
         # check if the vector store already exists
-        if os.path.exists(persist_directory) and os.listdir(persist_directory):
+        if os.path.exists(self.persist_directory) and os.listdir(self.persist_directory):
             if verbose:
                 print(f"Loading existing vector store for video {video_id}")
-            return Chroma(persist_directory=persist_directory, embedding_function=embeddings)
+            return Chroma(persist_directory=self.persist_directory, embedding_function=embeddings)
         
         if verbose:
             print(f"Creating new vector store for video {video_id}")
         # Create the directory if it does not exist
-        os.makedirs(persist_directory, exist_ok=True)
+        os.makedirs(self.persist_directory, exist_ok=True)
 
         text = transcript
         text_splitter = RecursiveCharacterTextSplitter(
@@ -222,10 +236,25 @@ class RAGSystem:
             texts=chunks,
             metadatas=metadatas,
             embedding=embeddings,
-            persist_directory=persist_directory
+            persist_directory=self.persist_directory
         )
 
         return vector_store
+    
+    
+    def cleanup_vector_store(self, verbose: bool = False):
+        """
+        Removes the local folder containing the vector embeddings and sets the vector store to None.
+        """
+        if os.path.exists(self.persist_directory):
+            # Remove the directory and all its contents
+            shutil.rmtree(self.persist_directory)
+            self.vector_store = None
+            if verbose:
+                print(f"Removed vector store directory: {self.persist_directory}")
+        else:
+            print(f"Vector store directory not found: {self.persist_directory}")
+
     
     def setup_retriever(self):
         return self.vector_store.as_retriever(
@@ -241,6 +270,7 @@ class RAGSystem:
                     max_tokens=1024,  
                     temperature=0)
     
+    
     def setup_rag_chain(self, video_title: str, guest_name: str, date: str):
 
         llm = self.llm
@@ -248,6 +278,7 @@ class RAGSystem:
         rag_chain = create_retrieval_chain(self.setup_history_retriever(llm), question_answer_chain)
 
         return rag_chain
+    
     
     def setup_system_prompt(self, video_title: str, guest_name: str, date: str):
         # Create a custom prompt template
@@ -288,6 +319,7 @@ class RAGSystem:
         )
         return qa_prompt
     
+    
     def setup_history_retriever(self, llm):
         """
         Setup a history aware retriever for a given retriever and language model.
@@ -300,6 +332,7 @@ class RAGSystem:
             self.setup_retrieval_prompt()
         )
         return history_aware_retriever
+    
     
     def setup_retrieval_prompt(self):
         """
@@ -330,10 +363,12 @@ class RAGSystem:
         )
         return contextualize_prompt
     
+    
     def get_session_history(self, session_id):
         if session_id not in self.store:
             self.store[session_id] = ChatMessageHistory()
         return self.store[session_id]
+    
     
     def setup_conversational_rag_chain(self):
         return RunnableWithMessageHistory(
@@ -373,23 +408,30 @@ def main():
     print("\nRAG system is ready. You can start asking questions about the video.")
     print("Type 'exit' to quit the chat.")
 
-    while True:
-        question = input("\nEnter your question: ").strip()
-        if question.lower() == 'exit':
-            break
-        try:
-            result = rag_system.conversational_rag_chain.invoke(
-                {
-                    "input": question,
-                    "video_title": video_manager.video_title,
-                    "guest_name": video_manager.guest_name,
-                    "date": video_manager.date
-                },
-                config={"configurable": {"session_id": rag_system.session_id}}
-            )
-            print("\nAnswer:", result['answer'])
-        except Exception as e:
-            print(f"An error occurred: {e}")
+    try:
+        while True:
+            question = input("\nEnter your question: ").strip()
+            if question.lower() == 'exit':
+                break
+            try:
+                result = rag_system.conversational_rag_chain.invoke(
+                    {
+                        "input": question,
+                        "video_title": video_manager.video_title,
+                        "guest_name": video_manager.guest_name,
+                        "date": video_manager.date
+                    },
+                    config={"configurable": {"session_id": rag_system.session_id}}
+                )
+                print("\nAnswer:", result['answer'])
+            except Exception as e:
+                print(f"An error occurred: {e}")
+    finally:
+        # This block will always be executed, even if an exception occurs
+        remove_store = input("\nDo you want to remove the local vector store? (y/n): ").strip().lower()
+        if remove_store == 'y':
+            rag_system.cleanup_vector_store()
+        print("Conversation ended.")
 
 
 
