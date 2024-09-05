@@ -112,24 +112,28 @@ class Video_Manager():
     def get_guest_name(self) -> str:
         """
         Get the guest name from the video title.
+        :return: guest name as a string
         """
         return self.selected_video['title'].split(':')[0].strip()
     
     def get_video_title(self) -> str:
         """
         Get the video title.
+        :return: video title as a string
         """
         return self.selected_video['title']
     
     def get_date(self) -> str:
         """
         Get the date of the video.
+        :return: date as a string
         """
         return self.selected_video['date']
     
     def get_full_transcript(self) -> str:
         """
         Get the full transcript of the video.
+        :return: full transcript as a string
         """
         return self.selected_video['full_text']
     
@@ -142,7 +146,7 @@ class Video_Manager():
         # if the transcript has more than 1 section, return the sections
         if len(self.selected_video['transcript']) > 1:
             return self.selected_video['transcript']
-        # if the transcript has a single section, that section is the full transcript    
+        # if the transcript has a single section, that section is the full transcript and we already have it
         else:
             return []
     
@@ -158,6 +162,9 @@ class Video_Manager():
 
 
 class RAGSystem:
+    """
+    A class to manage the RAG system for a single video.
+    """
     def __init__(self, 
                 video_id: str = None, 
                 transcript: str = None, 
@@ -192,6 +199,10 @@ class RAGSystem:
         """
         Define and return a vector store for a given video transcript.
         :param video_id: The ID of the video.
+        :param transcript: The transcript of the video.
+        :param video_title: The title of the video.
+        :param guest_name: The guest name of the video.
+        :param date: The date of the video.
         :param verbose: Whether to print verbose output.
         :return: A vector store for the video transcript.
         """
@@ -208,6 +219,7 @@ class RAGSystem:
         os.makedirs(self.persist_directory, exist_ok=True)
 
         text = transcript
+        # Split the transcript into chunks depending on the chunk size and overlap
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=500,
             chunk_overlap=100,
@@ -257,6 +269,10 @@ class RAGSystem:
 
     
     def setup_retriever(self):
+        """
+        Setup a retriever for the vector store.
+        The retriever catches the 10 most similar chunks to the query.
+        """
         return self.vector_store.as_retriever(
             search_type="similarity",
             search_kwargs={
@@ -265,6 +281,9 @@ class RAGSystem:
         )
     
     def setup_llm(self):
+        """
+        Setup the language model for the RAG system.
+        """
         return ChatOllama(model=self.model,
                     keep_alive="3h", 
                     max_tokens=1024,  
@@ -272,7 +291,10 @@ class RAGSystem:
     
     
     def setup_rag_chain(self, video_title: str, guest_name: str, date: str):
-
+        """
+        Setup the RAG chain for the RAG system.
+        This is the main chain that is used to answer the user's question.
+        """
         llm = self.llm
         question_answer_chain = create_stuff_documents_chain(llm, self.setup_system_prompt(video_title, guest_name, date))
         rag_chain = create_retrieval_chain(self.setup_history_retriever(llm), question_answer_chain)
@@ -281,7 +303,13 @@ class RAGSystem:
     
     
     def setup_system_prompt(self, video_title: str, guest_name: str, date: str):
-        # Create a custom prompt template
+        """
+        Setup a custom prompt template for the RAG system.
+        This prompt template is used to guide the RAG system in answering the user's question.
+        :param video_title: The title of the video.
+        :param guest_name: The guest name of the video.
+        :param date: The date of the video.
+        """
         system_prompt = """You are an helpful and friendly AI assistant representing Lex Fridman, the host of the Lex Fridman Podcast. \
             You're helping users learn about Lex's interview titled "{video_title}" with guest "{guest_name}" which was published on "{date}". \
             Your goal is to provide meaningful answers based on the interview content while maintaining Lex's \
@@ -365,12 +393,20 @@ class RAGSystem:
     
     
     def get_session_history(self, session_id):
+        """
+        Get the session history for a given session id.
+        Every session has its own chat history defined by the session id.
+        """
         if session_id not in self.store:
             self.store[session_id] = ChatMessageHistory()
         return self.store[session_id]
     
     
     def setup_conversational_rag_chain(self):
+        """
+        Setup a conversational RAG chain for the RAG system.
+        This is used to answer the user's question in a conversational manner.
+        """
         return RunnableWithMessageHistory(
             self.rag_chain,
             self.get_session_history,
