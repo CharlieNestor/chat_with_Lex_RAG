@@ -1,4 +1,5 @@
 import os
+import json
 import random
 import shutil
 import mongo_utils as mu
@@ -83,6 +84,55 @@ class Connection:
         # return the titles in the sorted order
         return [video['video_id'] for video in sorted_videos]
     
+
+class JSONConnection:
+    """
+    A class to connect to a JSON file containing video data. 
+    It also retrieves all the video titles and video ids.
+    """
+    def __init__(self, json_folder_path):
+        self.json_folder_path = json_folder_path
+        self.video_ids = []
+        self.video_titles = []
+        self.dates = []
+        self.all_videos = {}
+        self.load_data()
+
+    def has_data(self) -> bool:
+        """
+        Check if the JSON folder exists and contains data.
+        :return: True if data is available, False otherwise.
+        """
+        return os.path.isdir(self.json_folder_path) and len(self.all_videos) > 3
+    
+    def load_data(self):
+        if os.path.isdir(self.json_folder_path):
+            for filename in os.listdir(self.json_folder_path):
+                if filename.endswith('.json'):
+                    file_path = os.path.join(self.json_folder_path, filename)
+                    with open(file_path, 'r') as f:
+                        try:
+                            data = json.load(f)
+                            if 'video_id' in data and 'title' in data and 'date' in data:
+                                self.all_videos[data['video_id']] = data
+                                self.video_ids.append(data['video_id'])
+                                self.video_titles.append(data['title'])
+                                self.dates.append(data['date'])
+                            else:
+                                print(f"Warning: 'video_id', 'title', or 'date' missing in {filename}")
+                        except json.JSONDecodeError:
+                            print(f"Error: Unable to parse JSON in {filename}")
+            
+            # Sort the videos based on date
+            sorted_data = sorted(zip(self.video_ids, self.video_titles, self.dates), key=lambda x: x[2])
+            self.video_ids, self.video_titles, self.dates = zip(*sorted_data)
+            
+            # Convert tuples to lists
+            self.video_ids = list(self.video_ids)
+            self.video_titles = list(self.video_titles)
+            self.dates = list(self.dates)
+        else:
+            print("No data available. Please check your data source.")
 
     
 class Video_Manager():
