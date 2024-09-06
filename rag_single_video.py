@@ -179,8 +179,15 @@ class RAGSystem:
         self.llm = self.setup_llm()
         self.rag_chain = self.setup_rag_chain(video_title, guest_name, date)
         self.conversational_rag_chain = self.setup_conversational_rag_chain()
-        self.session_id = f"user_session_{random.randint(1000, 9999)}"
+        self.session_id = self.generate_session_id()
         self.store = {}
+
+    
+    def generate_session_id(self):
+        """
+        Generate a random session id for the RAG system.
+        """
+        return f"user_session_{random.randint(1000, 9999)}"
 
 
     def define_model(self) -> str:
@@ -414,6 +421,16 @@ class RAGSystem:
             history_messages_key="chat_history",
             output_messages_key="answer",
         )
+    
+    def reset_memory(self):
+        """
+        Reset the memory of the RAG system and create a new session id.
+        """
+        # Generate a new session ID
+        self.session_id = self.generate_session_id()
+        # Recreate the conversational chain
+        self.conversational_rag_chain = self.setup_conversational_rag_chain()
+
 
 
 
