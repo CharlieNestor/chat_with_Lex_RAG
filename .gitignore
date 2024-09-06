@@ -3,3 +3,5 @@
 
 lex_rag/
 chroma_db/
+
+test_rag_single.py
