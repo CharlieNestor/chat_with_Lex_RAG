@@ -1,13 +1,17 @@
 # Chat with Lex RAG
 
-This project implements a chatbot capable of using Retrieval-Augmented Generation (RAG) to answer questions about specific episodes of the Lex Fridman podcast.
+This project implements a friendly chatbot capable of using Retrieval-Augmented Generation (RAG) to answer questions about specific episodes of the Lex Fridman podcast published on YouTube. The chatbot is implemented using user-friendly Streamlit interface and can also be run locally by using Ollama for LLM generation. 
+
+The full dataset is available in the folder 'JSON_storage'. Alternatively, you can obtain the dataset autonomously by checking and using the project at [https://github.com/CharlieNestor/retrieve_video_info_YouTube_channel](https://github.com/CharlieNestor/retrieve_video_info_YouTube_channel) and then following the steps in the files `create_video_db.ipynb` and `create_transcript_db.ipynb`.
+
 
 ## Features
 
-- Interactive chat interface to explore podcast episodes
+- Local database with some 400 podcast episodes
+- Interactive chat interface to explore podcast episodes via Streamlit
 - RAG-based question answering system
 - Support for MongoDB and local JSON storage
-- Streamlit-based web application
+- Step-by-step guide on how to prepare the dataset
 
 
 ## Prerequisites
