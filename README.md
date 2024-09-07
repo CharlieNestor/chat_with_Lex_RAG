@@ -12,7 +12,8 @@ This project implements a chatbot capable of using Retrieval-Augmented Generatio
 
 ## Prerequisites
 
-- Ollama installed locally with some models loaded (suggested are gemma2:2b and llama3.1:8b )
+- Ollama installed locally with some models loaded (suggested models are gemma2:2b and llama3.1:8b )
+- OpenAI API key set up
 
 
 ## Getting Started
@@ -29,12 +30,13 @@ This project implements a chatbot capable of using Retrieval-Augmented Generatio
 
 3. Set up environment variables:
    - Create a `.env` file in the project root
-   - Add necessary environment variables (e.g., MongoDB connection string)
+   - Add necessary environment variables, for example:
+   ````
+    MONGO_URI=mongodb://admin:password@localhost:27017/
+    OPENAI_API_KEY=your_openai_api_key
+    ````
 
-
-## Usage
-
-1. Run the Streamlit app:
+4. Run the Streamlit app:
    ```
    streamlit run rag_video_streamlit.py
    ```

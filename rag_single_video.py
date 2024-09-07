@@ -13,6 +13,8 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
 
 load_dotenv()
 
@@ -221,9 +223,11 @@ class RAGSystem:
                 video_title: str = None, 
                 guest_name: str = None,
                 date: str = None,
+                model_provider: str = 'ollama',
                 ):
         self.persist_directory = f"./chroma_db/{video_id}"
-        self.model = self.define_model()
+        self.model_provider = model_provider
+        self.model_name = self.define_model()
         self.vector_store = self.define_vector_store(video_id, transcript, video_title, guest_name, date)
         self.retriever = self.setup_retriever()
         self.llm = self.setup_llm()
@@ -246,9 +250,16 @@ class RAGSystem:
         This function selects a language model from predefined options. 
         :return: The name of the chosen language model.
         """
-        model_1 = 'llama3.1:8b'
-        model_2 = 'gemma2:2b'
-        chosen_model = model_2
+        if self.model_provider == 'ollama':
+            model_1 = 'llama3.1:8b'
+            model_2 = 'gemma2:2b'
+            chosen_model = model_2
+        elif self.model_provider == 'openai':
+            model_1 = 'gpt-3.5-turbo-0125'
+            model_2 = 'gpt-4o-mini-2024-07-18'
+            chosen_model = model_2
+        else:
+            raise ValueError(f"Model provider {self.model_provider} not found")
         return chosen_model
     
     
@@ -263,7 +274,15 @@ class RAGSystem:
         :param verbose: Whether to print verbose output.
         :return: A vector store for the video transcript.
         """
-        embeddings = OllamaEmbeddings(model=self.model)
+        if self.model_provider == 'ollama':
+            embeddings = OllamaEmbeddings(model=self.model_name)
+        elif self.model_provider == 'openai':
+            model_1 = 'text-embedding-ada-002'
+            model_2 = 'text-embedding-3-small'
+            model_3 = 'text-embedding-3-large'
+            embeddings = OpenAIEmbeddings(model=model_2)
+        else:
+            raise ValueError(f"Model provider {self.model_provider} not found")
         # check if the vector store already exists
         if os.path.exists(self.persist_directory) and os.listdir(self.persist_directory):
             if verbose:
@@ -341,10 +360,17 @@ class RAGSystem:
         """
         Setup the language model for the RAG system.
         """
-        return ChatOllama(model=self.model,
+        if self.model_provider == 'ollama':
+            return ChatOllama(model=self.model,
                     keep_alive="3h", 
                     max_tokens=1024,  
                     temperature=0)
+        elif self.model_provider == 'openai':
+            return ChatOpenAI(model=self.model_name,
+                    max_tokens=1024,
+                    temperature=0)
+        else:
+            raise ValueError(f"Model provider {self.model_provider} not found")
     
     
     def setup_rag_chain(self, video_title: str, guest_name: str, date: str):

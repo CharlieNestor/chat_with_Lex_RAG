@@ -1,4 +1,3 @@
-import time
 import streamlit as st
 from rag_single_video import Connection, Video_Manager, RAGSystem, JSONConnection
 
@@ -58,6 +57,9 @@ with st.sidebar:
     st.write(f"🎙️ **Guest:** {video_manager.guest_name}")
     st.write(f"📅 **Date:** {video_manager.date}")
 
+    # Add LLM provider selection
+    llm_provider = st.selectbox("Select LLM Provider:", ["OpenAI", "Ollama"])   # default is OpenAI
+
     # Add "Load Interview" button
     if st.button("Load Interview"):
         with st.spinner("Preparing the interview... This might take a moment! 🧠"):
@@ -66,7 +68,8 @@ with st.sidebar:
                 transcript=video_manager.full_transcript,
                 video_title=video_manager.video_title,
                 guest_name=video_manager.guest_name,
-                date=video_manager.date
+                date=video_manager.date,
+                model_provider=llm_provider.lower()
             )
         st.success("Interview loaded successfully! You can now start chatting.")
 
@@ -104,6 +107,16 @@ if prompt := st.chat_input("Ask me anything about this episode! 🤔"):
     if st.session_state.rag_system is None:
         st.warning("Please load the interview first by clicking the 'Load Interview' button in the sidebar.")
     else:
+        # Hard reset after 50 messages
+        if len(st.session_state.messages) >= 50:
+            reset_message = ("I apologize, but our conversation has become too long. "
+                             "To ensure the best performance, I need to refresh my memory. "
+                             "Feel free to continue our discussion or start a new topic!")
+            with st.chat_message("assistant"):
+                st.markdown(reset_message)
+            # Reset the memory
+            st.session_state.rag_system.reset_memory()
+            st.session_state.messages = []  # Clear the chat history
 
         # Display user message
         st.chat_message("user").markdown(prompt)
