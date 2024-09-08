@@ -58,7 +58,7 @@ with st.sidebar:
     st.write(f"📅 **Date:** {video_manager.date}")
 
     # Add LLM provider selection
-    llm_provider = st.selectbox("Select LLM Provider:", ["OpenAI", "Ollama"])   # default is OpenAI
+    llm_provider = st.selectbox("Select LLM Provider:", ["OpenAI", "Anthropic", "Ollama"])   # default is OpenAI
 
     # Add "Load Interview" button
     if st.button("Load Interview"):
@@ -96,6 +96,7 @@ if "current_video_id" not in st.session_state or st.session_state.current_video_
     st.session_state.current_video_id = selected_video_id
     st.session_state.rag_system = None  # Reset RAG system
 
+
 # Display chat messages from history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -109,14 +110,18 @@ if prompt := st.chat_input("Ask me anything about this episode! 🤔"):
     else:
         # Hard reset after 50 messages
         if len(st.session_state.messages) >= 50:
-            reset_message = ("I apologize, but our conversation has become too long. "
-                             "To ensure the best performance, I need to refresh my memory. "
-                             "Feel free to continue our discussion or start a new topic!")
-            with st.chat_message("assistant"):
-                st.markdown(reset_message)
-            # Reset the memory
+            # Reset the memory first
             st.session_state.rag_system.reset_memory()
-            st.session_state.messages = []  # Clear the chat history
+            # Then clear the chat history
+            st.session_state.messages = []
+
+            reset_message = ("I apologize, but as I'm still in development, I need to refresh my memory "
+                             "after a certain number of messages to ensure optimal performance. "
+                             "Please feel free to continue our discussion or start a new topic!")
+            st.session_state.messages.append({"role": "assistant", "content": reset_message})
+
+            # Force a rerun to update the UI
+            st.rerun()
 
         # Display user message
         st.chat_message("user").markdown(prompt)
@@ -138,6 +143,8 @@ if prompt := st.chat_input("Ask me anything about this episode! 🤔"):
         with st.chat_message("assistant"):
             st.markdown(response['answer'])
         st.session_state.messages.append({"role": "assistant", "content": response['answer']})
+
+
 
 
 # Call-to-action

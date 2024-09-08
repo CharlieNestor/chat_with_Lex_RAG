@@ -14,6 +14,7 @@ from langchain.chains import create_history_aware_retriever, create_retrieval_ch
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_anthropic import ChatAnthropic
 
 
 load_dotenv()
@@ -255,9 +256,13 @@ class RAGSystem:
             model_2 = 'gemma2:2b'
             chosen_model = model_2
         elif self.model_provider == 'openai':
-            model_1 = 'gpt-3.5-turbo-0125'
+            model_1 = 'gpt-4o'
             model_2 = 'gpt-4o-mini-2024-07-18'
             chosen_model = model_2
+        elif self.model_provider == 'anthropic':
+            model_1 = 'claude-3-5-sonnet-20240620'
+            model_2 = 'claude-3-haiku-20240307'
+            chosen_model = model_1
         else:
             raise ValueError(f"Model provider {self.model_provider} not found")
         return chosen_model
@@ -276,7 +281,8 @@ class RAGSystem:
         """
         if self.model_provider == 'ollama':
             embeddings = OllamaEmbeddings(model=self.model_name)
-        elif self.model_provider == 'openai':
+        elif self.model_provider == 'openai' or self.model_provider == 'anthropic':
+            # for openai and anthropic, we use the same embedding model
             model_1 = 'text-embedding-ada-002'
             model_2 = 'text-embedding-3-small'
             model_3 = 'text-embedding-3-large'
@@ -361,12 +367,16 @@ class RAGSystem:
         Setup the language model for the RAG system.
         """
         if self.model_provider == 'ollama':
-            return ChatOllama(model=self.model,
+            return ChatOllama(model=self.model_name,
                     keep_alive="3h", 
                     max_tokens=1024,  
                     temperature=0)
         elif self.model_provider == 'openai':
             return ChatOpenAI(model=self.model_name,
+                    max_tokens=1024,
+                    temperature=0)
+        elif self.model_provider == 'anthropic':
+            return ChatAnthropic(model=self.model_name,
                     max_tokens=1024,
                     temperature=0)
         else:
