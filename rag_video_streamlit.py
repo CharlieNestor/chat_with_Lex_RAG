@@ -60,6 +60,16 @@ with st.sidebar:
     # Add LLM provider selection
     llm_provider = st.selectbox("Select LLM Provider:", ["OpenAI", "Anthropic", "Ollama"])   # default is OpenAI
 
+    # Add model selection based on the chosen provider
+    if llm_provider == "OpenAI":
+        model_options = ["gpt-4o-mini", "gpt-4o"]
+    elif llm_provider == "Anthropic":
+        model_options = ["claude-3-5-sonnet-20240620", "claude-3-haiku-20240307"]
+    else:  # Ollama
+        model_options = ["gemma2:2b", "llama3.1:8b"]
+
+    selected_model = st.selectbox(f"Select {llm_provider} Model:", model_options)
+
     # Add "Load Interview" button
     if st.button("Load Interview"):
         with st.spinner("Preparing the interview... This might take a moment! 🧠"):
@@ -69,7 +79,8 @@ with st.sidebar:
                 video_title=video_manager.video_title,
                 guest_name=video_manager.guest_name,
                 date=video_manager.date,
-                model_provider=llm_provider.lower()
+                model_provider=llm_provider.lower(),
+                model_name = selected_model
             )
         st.success("Interview loaded successfully! You can now start chatting.")
 

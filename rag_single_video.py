@@ -225,10 +225,11 @@ class RAGSystem:
                 guest_name: str = None,
                 date: str = None,
                 model_provider: str = 'ollama',
+                model_name: str = None
                 ):
         self.persist_directory = f"./chroma_db/{video_id}"
         self.model_provider = model_provider
-        self.model_name = self.define_model()
+        self.model_name = model_name
         self.vector_store = self.define_vector_store(video_id, transcript, video_title, guest_name, date)
         self.retriever = self.setup_retriever()
         self.llm = self.setup_llm()
@@ -243,29 +244,6 @@ class RAGSystem:
         Generate a random session id for the RAG system.
         """
         return f"user_session_{random.randint(1000, 9999)}"
-
-
-    def define_model(self) -> str:
-        """
-        Define and return the chosen language model for embeddings and inference.
-        This function selects a language model from predefined options. 
-        :return: The name of the chosen language model.
-        """
-        if self.model_provider == 'ollama':
-            model_1 = 'llama3.1:8b'
-            model_2 = 'gemma2:2b'
-            chosen_model = model_2
-        elif self.model_provider == 'openai':
-            model_1 = 'gpt-4o'
-            model_2 = 'gpt-4o-mini-2024-07-18'
-            chosen_model = model_2
-        elif self.model_provider == 'anthropic':
-            model_1 = 'claude-3-5-sonnet-20240620'
-            model_2 = 'claude-3-haiku-20240307'
-            chosen_model = model_1
-        else:
-            raise ValueError(f"Model provider {self.model_provider} not found")
-        return chosen_model
     
     
     def define_vector_store(self, video_id: str, transcript: str, video_title: str, guest_name: str, date: str, verbose: bool = False) -> Chroma:

@@ -16,12 +16,10 @@ The full dataset for the Lex Fridman podcast is available in the folder 'JSON_st
 
 ## Prerequisites
 
-One among the following:
+ONE among the following solutions:
 - Ollama installed locally with some models loaded ( suggested models are gemma2:2b and llama3.1:8b )
 - OpenAI API key set up
 - Anthropic API key set up
-
-Depending on the chosen model provider, you need to specify the desired model for embedding and LLM generation. This is done in the `rag_single_video.py` file. In particular, check out the `define_vector_store` and `define_llm` functions.
 
 
 ## Getting Started
