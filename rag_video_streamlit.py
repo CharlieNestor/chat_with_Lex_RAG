@@ -66,7 +66,7 @@ with st.sidebar:
     elif llm_provider == "Anthropic":
         model_options = ["claude-3-5-sonnet-20240620", "claude-3-haiku-20240307"]
     else:  # Ollama
-        model_options = ["gemma2:2b", "llama3.1:8b"]
+        model_options = ["gemma2:2b", "llama3.1:8b", "gemma2:9b", "phi3:3.8b"]
 
     selected_model = st.selectbox(f"Select {llm_provider} Model:", model_options)
 
@@ -154,8 +154,21 @@ if prompt := st.chat_input("Ask me anything about this episode! 🤔"):
         with st.chat_message("assistant"):
             st.markdown(response['answer'])
         st.session_state.messages.append({"role": "assistant", "content": response['answer']})
-
-
+        
+        # variable to control the relevant context
+        show_context_expander = False
+        #show_context = st.checkbox("Show Context")     # other possible solution
+        if show_context_expander:
+            # Display retrieved documents
+            with st.expander("View Context and Response Details"):
+                st.subheader("Context:")
+                if 'context' in response:
+                    for document in response['context']:
+                        st.markdown(f"**Document:** {document.metadata}")
+                        st.markdown(f"```\n{document.page_content}\n```")
+                        st.markdown("---")
+                    else:
+                        st.write("No context available.")
 
 
 # Call-to-action
