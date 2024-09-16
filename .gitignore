@@ -1,8 +1,8 @@
+# Environment variables
 .DS_Store
 .env
 
+# Directories
 lex_rag/
 chroma_db/
-
-test_rag_single.py
-test_openai.ipynb
+wip_files/
